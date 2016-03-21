@@ -44,6 +44,7 @@ public:
 
 	CSceneObject(GLuint, glm::vec3 pos, glm::vec3 rot, glm::vec3 scal);
 	~CSceneObject();
+	extern friend class COpenglContext;
 };
 
 class CPolygonalPrismObject : public CSceneObject
@@ -66,4 +67,6 @@ public:
 	GLuint translateID;
 	CPolygonalPrismObject(GLuint, glm::vec3 pos, glm::vec3 rot, glm::vec3 scale , GLuint sidesNum, GLfloat height, GLfloat width, glm::vec4 color);
 	~CPolygonalPrismObject();
+	extern friend class COpenglContext;
+
 };

@@ -110,7 +110,7 @@ COpenglContext::COpenglContext()
 	ambientCoef = 0.2;
 	lightColor = vec3(1, 1, 1);
 	lAmbient = ambientCoef*lightColor;
-	lPos = vec3(-10, 10, -10);
+	lPos = vec3(10, -10, -10);
 	lShine = 0.5f;
 	lStrength = 0.5f;
 	FoV = 45.0f;
@@ -227,6 +227,82 @@ void COpenglContext::resize(int x, int y)
 		proj = glm::perspective(radians(FoV), (float)width / (float)height, 0.1f, 100.0f);
 		glUniformMatrix4fv(MatrixID_Projection, 1, GL_FALSE, &proj[0][0]);
 	}
+}
+
+void COpenglContext::selectObject(bool multiple)
+{
+	POINT clickPoint;
+	GetCursorPos(&clickPoint);
+	int mouse_x = clickPoint.x;
+	int mouse_y = clickPoint.y;
+
+	float x = (2.0f * mouse_x) / width - 1.0f;
+	float y = 1.0f - (2.0f * mouse_y) / height;
+	float z = 1.0f;
+	vec3 ray_nds = vec3(x, y, z);
+	vec4 ray_clip = vec4(ray_nds.x, ray_nds.y, -1.0, 1.0);
+	vec4 ray_eye = inverse(proj) * ray_clip;
+	ray_eye = vec4(ray_eye.x, ray_eye.y, -1.0, 0.0);
+	vec3 ray_wor = vec3((inverse(view) * ray_eye));
+	// don't forget to normalise the vector at some point
+	ray_wor = normalize(ray_wor);
+
+	vec3 intersect=vec3(10000, 10000, 10000); short selected=-1;
+	for (int i = 0; i < fieldObjects.size(); i++)
+	{
+		vec3 temp_intersect;
+		if (fieldObjects[i]->selectionRayTry(ray_wor, pov, temp_intersect))
+		{
+			if (distance(pov, temp_intersect) < distance(pov, intersect))
+			{
+				intersect = temp_intersect;
+				selected = i;
+			}
+		}
+	}
+	if (selected >= 0)
+	{
+		if (multiple)
+		{
+			if (selectedObjects.count(selected))
+			{
+				selectedObjects.erase(selected);
+				fieldObjects[selected]->selectionMode = 0;
+			}
+			else
+			{
+				selectedObjects.insert(selected);
+				fieldObjects[selected]->selectionMode = 1;
+			}
+		}
+		else
+		{
+			if (selectedObjects.count(selected))
+			{
+				for (auto j = selectedObjects.begin(); j!= selectedObjects.end(); j++)
+					fieldObjects[*j]->selectionMode = 0;
+				selectedObjects.clear();
+			}
+			else
+			{
+				for (auto j = selectedObjects.begin(); j != selectedObjects.end(); j++)
+					fieldObjects[*j]->selectionMode = 0;
+				selectedObjects.clear();
+				selectedObjects.insert(selected);
+				fieldObjects[selected]->selectionMode = 1;
+			}
+		}
+
+
+	}
+	else
+	{
+		for (auto j = selectedObjects.begin(); j != selectedObjects.end(); j++)
+				fieldObjects[(*j)]->selectionMode = 0;
+			selectedObjects.clear();
+	}
+
+	return;
 }
 
 void COpenglContext::addObject(glm::vec3 pos, glm::vec3 rot, glm::vec3 scale, GLuint sidesNum, GLfloat height, GLfloat width, glm::vec4 color)

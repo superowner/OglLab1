@@ -219,11 +219,6 @@ void CPolygonalPrismObject::rotate(vec3 rot)
 	glBufferData(GL_ARRAY_BUFFER, normals.size()*sizeof(vec3), &normals[0], GL_STATIC_DRAW);
 }
 
-GLboolean CPolygonalPrismObject::selectionRayTry(vec3, vec3, vec3 &)
-{
-	return GLboolean();
-}
-
 
 vec3 findNormal(vec3 coor2, vec3 coor1, vec3 coor0)
 {
@@ -235,6 +230,15 @@ vec3 findNormal(vec3 coor2, vec3 coor1, vec3 coor0)
 		a.z * b.x - a.x * b.z,
 		a.x * b.y - b.x * a.y
 		);
+}
+glm::vec3 computeNormal
+(
+	glm::vec3 const & a,
+	glm::vec3 const & b,
+	glm::vec3 const & c
+	)
+{
+	return glm::normalize(glm::cross(c - a, b - a));
 }
 
 
@@ -301,7 +305,7 @@ CPolygonalPrismObject::CPolygonalPrismObject(GLuint vao=0, vec3 pos=vec3(0), vec
 	tmp_vertices.clear();
 	for (int i = 0; i < vertices.size() / 3; i++)
 	{
-		normals[3 * i] = normalize(findNormal(vertices[3 * i], vertices[3 * i + 1], vertices[3 * i + 2]));
+		normals[3 * i] = normalize(computeNormal(vertices[3 * i], vertices[3 * i + 1], vertices[3 * i + 2]));
 		normals[3 * i + 1] = normals[3 * i];
 		normals[3 * i + 2] = normals[3 * i];
 
@@ -345,3 +349,71 @@ CPolygonalPrismObject::~CPolygonalPrismObject()
 
 }
 
+
+GLboolean CPolygonalPrismObject::selectionRayTry(vec3 pickingRay, vec3 observingPoint, vec3 &intersectionPoint)
+{
+	vec4 plane, tmp_plane;
+	short get = 0;
+	vec3 intersection1, intersection2;
+	for (int i = 0; i < vertices.size() / 3; i++)
+	{
+		vec3 vertices_[3];
+		vertices_[0] = vertices[3 * i] + position;
+		vertices_[1] = vertices[3 * i + 1] + position;
+		vertices_[2] = vertices[3 * i + 2] + position;
+		vec3 n = -normals[3 * i];
+		float D = -(n.x*vertices_[0].x + n.y*vertices_[0].y + n.z*vertices_[0].z);
+		D += n.x*observingPoint.x + n.y*observingPoint.y + n.z*observingPoint.z;
+		float l = -D / (n.x*pickingRay.x + n.y*pickingRay.y + n.z*pickingRay.z);
+		if (l == 0) continue;
+		vec3 plane_intersection = pickingRay*l+observingPoint;
+
+		vec3 customRay = plane_intersection - vertices_[0];
+
+		float lambda;
+		if (customRay.x != 0)
+		{
+			if (vertices_[1].y != vertices_[2].y)
+				lambda = (vertices_[0].y - vertices_[1].y + customRay.y*(vertices_[1].x - vertices_[0].x) / customRay.x) /
+				(vertices_[2].y - vertices_[1].y + customRay.y*(vertices_[2].x - vertices_[1].x) / customRay.x);
+			else if (vertices_[1].z != vertices_[2].z)
+			{
+				lambda = (vertices_[0].z - vertices_[1].z + customRay.z*(vertices_[1].x - vertices_[0].x) / customRay.x) /
+					(vertices_[2].z - vertices_[1].z + customRay.z*(vertices_[2].x - vertices_[1].x) / customRay.x);
+			}
+		}
+		else
+		{
+			lambda = (vertices_[0].z - vertices_[1].z + customRay.z*(vertices_[1].y - vertices_[0].y) / customRay.y) /
+				(vertices_[2].z - vertices_[1].z + customRay.z*(vertices_[2].y - vertices_[1].y) / customRay.y);
+		}
+		vec3 intersect = vertices_[1] + lambda*(vertices_[2] - vertices_[1]);
+		float length0 = distance(vertices_[1], vertices_[2]), 
+			length1 = distance(intersect, vertices_[2]), 
+			length2 = distance(vertices_[1], intersect);
+		if (length0 == length1 + length2)
+		{
+			if (get)
+			{
+				intersection2 = plane_intersection;
+				break;
+			}
+			else
+			{
+				intersection1 = plane_intersection;
+				get++;
+			}
+		}
+	}
+	if (distance(intersection1, observingPoint) > distance(intersection2, observingPoint))
+	{
+		intersectionPoint = intersection2;
+	}
+	else
+		intersectionPoint = intersection1;
+
+	if (get)
+		return true;
+	else
+		return false;
+}

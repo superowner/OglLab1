@@ -2,6 +2,7 @@
 
 #include "SceneObject.h"
 #include <vector>
+#include <set>
 
 using namespace std;
 using namespace glm;
@@ -14,7 +15,7 @@ private:
 	vec2 angleFree; //horizontal-vertical for free camera
 	float FoV;
 	float mouseSpeed;
-	vector <GLushort> selectedObjects;
+	set <GLushort> selectedObjects;
 
 	
 	GLuint width, height;
@@ -54,6 +55,7 @@ public:
 	void Init();
 	void Draw();
 	void resize(int x, int y);
+	void selectObject(bool);
 	void addObject(glm::vec3 pos, glm::vec3 rot, glm::vec3 scale, GLuint sidesNum, GLfloat height, GLfloat width, glm::vec4 color);
 	void moveSelected();
 	COpenglContext();

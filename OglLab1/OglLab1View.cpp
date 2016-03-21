@@ -28,6 +28,7 @@ BEGIN_MESSAGE_MAP(COglLab1View, CView)
 	ON_WM_SIZE()
 	ON_WM_ERASEBKGND()
 	ON_WM_TIMER()
+	ON_WM_LBUTTONDOWN()
 END_MESSAGE_MAP()
 
 // COglLab1View construction/destruction
@@ -145,7 +146,7 @@ int COglLab1View::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	screen_y_size = rect.Height();
 
 	currContext->resize(screen_x_size, screen_y_size);
-	for (int i = 0; i < 1; i++)
+	for (int i = -1; i < 2; i++)
 		currContext->addObject(vec3(i, 2 * i, -4 * i), vec3(0), vec3(1), 8, 2, 1, vec4((i + 5) / 10, 0, 1.0, 1));
 	// We now have a rendering context, so we can set the initial drawing state.
 	// Find the initialize OpenGL function provided in the Lab 1 notes and call it here
@@ -410,4 +411,12 @@ void COglLab1View::OnTimer(UINT_PTR nIDEvent)
 	MSG msg;
 	while (::PeekMessage(&msg, m_hWnd, WM_TIMER, WM_TIMER, PM_REMOVE));
 
+}
+
+
+void COglLab1View::OnLButtonDown(UINT nFlags, CPoint point)
+{
+	// TODO: Add your message handler code here and/or call default
+	currContext->selectObject(false);
+	CView::OnLButtonDown(nFlags, point);
 }
