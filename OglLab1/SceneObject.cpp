@@ -27,9 +27,14 @@ void CSceneObject::setScale(vec3 _scale)
 	scale = _scale;
 }
 
+void CSceneObject::move(glm::vec3 _pos)
+{
+	position += _pos;
+}
+
 void CSceneObject::translate(vec3 _pos)
 {
-	position +=_pos;
+	position =_pos;
 }
 
 void CSceneObject::rotate(vec3)
@@ -39,6 +44,21 @@ void CSceneObject::rotate(vec3)
 void CSceneObject::projection(GLushort d)
 {
 	drawProjection = d;
+}
+
+vec3 CSceneObject::getScale()
+{
+	return scale;
+}
+
+vec3 CSceneObject::getPos()
+{
+	return position;
+}
+
+vec3 CSceneObject::getRotation()
+{
+	return rotation;
 }
 
 
@@ -76,7 +96,7 @@ void CPolygonalPrismObject::draw(GLuint vao, GLuint translateID,GLuint colorUnif
 	glDisableVertexAttribArray(1);
 	if (selectionMode)
 	{
-		vec4 selectionCol = vec4(0xff / 0x100, 0xa5 / 0x100, 0x00, 1);
+		vec4 selectionCol = vec4(1, 0.645f, 0, 1);
 		glUniform4fv(colorUniformID, 1, &selectionCol[0]);
 		glEnableVertexAttribArray(0);
 

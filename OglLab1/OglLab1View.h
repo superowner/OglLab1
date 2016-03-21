@@ -33,7 +33,27 @@ public:
 #endif
 
 protected:
+	//////////////////////////////////////////////////////////////////////////////
+	// You will add the following stuff!!!
 
+	virtual BOOL GetOldStyleRenderingContext(void);
+	virtual BOOL SetupPixelFormat(void);
+
+
+private:
+	//OpenGL Setup
+	BOOL GetRenderingContext();
+	//Rendering Context and Device Context Pointers
+	HGLRC     m_hRC;
+	CDC*      m_pDC;
+
+	//Error Handling
+	void SetError(int e);
+	static const char* const _ErrorStrings[];
+	const char* m_ErrorString;
+	COpenglContext *currContext;
+
+	int screen_x_size, screen_y_size;
 // Generated message map functions
 protected:
 	DECLARE_MESSAGE_MAP()
