@@ -51,11 +51,13 @@ private:
 	GLuint enableDirectLightID;
 
 	GLuint prog;
+
+	vec3 ray;
 public:
 	void Init();
 	void Draw();
 	void resize(int x, int y);
-	void selectObject(bool);
+	void selectObject(bool, POINT&);
 	void addObject(glm::vec3 pos, glm::vec3 rot, glm::vec3 scale, GLuint sidesNum, GLfloat height, GLfloat width, glm::vec4 color);
 	void moveSelected();
 	COpenglContext();

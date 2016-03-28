@@ -140,17 +140,18 @@ int COglLab1View::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	}
 	currContext = new COpenglContext();
 
-	CRect rect;
+	/*CRect rect;
 	SystemParametersInfo(SPI_GETWORKAREA, 0, &rect, 0);
 	screen_x_size = rect.Width();
 	screen_y_size = rect.Height();
-
-	currContext->resize(screen_x_size, screen_y_size);
-	for (int i = -1; i < 2; i++)
-		currContext->addObject(vec3(i, 2 * i, -4 * i), vec3(0), vec3(1), 8, 2, 1, vec4((i + 5) / 10, 0, 1.0, 1));
+*/
+	currContext->resize(800, 600);
+	for (int i = 0; i < 2; i++)
+		currContext->addObject(vec3(i, 2 * i, -4 * i), vec3(0), vec3(1), 4, 2, 2, vec4((i + 5) / 10, 0, 1.0, 1));
 	// We now have a rendering context, so we can set the initial drawing state.
 	// Find the initialize OpenGL function provided in the Lab 1 notes and call it here
 	//	OnDraw(NULL);
+	
 	return 0;
 }
 
@@ -381,9 +382,13 @@ void COglLab1View::OnPaint()
 void COglLab1View::OnSize(UINT nType, int cx, int cy)
 {
 	CView::OnSize(nType, cx, cy);
+
+	screen_x_size = cx;
+	screen_y_size = cy;
+
 	currContext->resize(cx, cy);
 	glViewport(0, 0, (GLsizei)cx, (GLsizei)cy);
-
+//	SetCursorPos(cx / 2, cy / 2);
 	// TODO: Add your message handler code here
 }
 
@@ -417,6 +422,6 @@ void COglLab1View::OnTimer(UINT_PTR nIDEvent)
 void COglLab1View::OnLButtonDown(UINT nFlags, CPoint point)
 {
 	// TODO: Add your message handler code here and/or call default
-	currContext->selectObject(false);
+	currContext->selectObject(false, point);
 	CView::OnLButtonDown(nFlags, point);
 }

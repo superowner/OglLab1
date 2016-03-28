@@ -64,7 +64,7 @@ public:
 	void setScale(glm::vec3);
 	void rotate(glm::vec3);
 	GLboolean selectionRayTry(glm::vec3, glm::vec3, glm::vec3&);
-	GLuint translateID;
+	//GLuint translateID;
 	CPolygonalPrismObject(GLuint, glm::vec3 pos, glm::vec3 rot, glm::vec3 scale , GLuint sidesNum, GLfloat height, GLfloat width, glm::vec4 color);
 	~CPolygonalPrismObject();
 	extern friend class COpenglContext;
