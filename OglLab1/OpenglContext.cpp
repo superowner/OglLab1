@@ -110,17 +110,17 @@ COpenglContext::COpenglContext()
 	ambientCoef = 0.2;
 	lightColor = vec3(1, 1, 1);
 	lAmbient = ambientCoef*lightColor;
-	lPos = vec3(-10, 10, -10);
+	lPos = vec3(10, -10, -10);
 	lShine = 0.5f;
 	lStrength = 0.5f;
 	FoV = 45.0f;
 	mouseSpeed = 0.0005f;
-	pov = vec3(1, 2, 8);
+	pov = vec3(0, 2, 10);
 	angleFree = vec2(3.14, -0.698); //horizontal-vertical
-	
-	direction = vec3(0, -0.31, -0.95);
+	ray = vec3(0);
+	direction = vec3(0, 0, -1);
 	right = vec3(1, 0, 0);
-	up = normalize(vec3(0, 0.95, 0.31));
+	up = normalize(vec3(0, 1, 0));
 
 	width = 800; height = 600;
 	Init();
@@ -134,12 +134,11 @@ COpenglContext::~COpenglContext()
 
 void COpenglContext::Init()
 {
-	void* a = glGetUniformLocation;
 	glGenVertexArrays(1, &vao);
 	glBindVertexArray(vao);
 	glClearColor(1.0, 1.0, 1.0, 1.0);
 
-glClearDepth(1.0f);
+	glClearDepth(1.0f);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
 	glDepthMask(GL_TRUE);
@@ -147,16 +146,7 @@ glClearDepth(1.0f);
 	prog = LoadShaders(SHADERV_, SHADERF_);
 
 	ColourID = glGetUniformLocation(prog, "Color");
-/*
-	uniform vec3 LightAmbient;
-	uniform vec3 LightPos;
-	uniform vec3 LightColor;
 
-	uniform int enableDirectLight;
-
-	uniform float LightShine;
-	uniform float LightStrength;
-	uniform vec4 color;*/
 	
 	MatrixID_MV = glGetUniformLocation(prog, "MV");
 	MatrixID_Projection = glGetUniformLocation(prog, "P");
@@ -190,8 +180,6 @@ glClearDepth(1.0f);
 	// Send our transformation to the currently bound shader, 
 	// in the "MVP" uniform
 
-
-
 	glUniformMatrix4fv( MatrixID_Projection, 1, GL_FALSE, &proj[0][0]);
 	glUniform3fv( LightVecAmbientID, 1, & lAmbient[0]);
 	glUniform3fv( LightPosID, 1, & lPos[0]);
@@ -202,21 +190,16 @@ glClearDepth(1.0f);
 	
 	
 }
-
 void COpenglContext::Draw()
 {
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glUseProgram(this->prog);
 
-	
-
 	for (int i = 0; i < fieldObjects.size();i++)
 	{
 		fieldObjects[i]->draw(vao, translateID, ColourID, MatrixID_MV, &view, enableDirectLightID);
 	}
-
-
 }
 
 void COpenglContext::resize(int x, int y)
@@ -227,6 +210,68 @@ void COpenglContext::resize(int x, int y)
 		proj = glm::perspective(radians(FoV), (float)width / (float)height, 0.1f, 100.0f);
 		glUniformMatrix4fv(MatrixID_Projection, 1, GL_FALSE, &proj[0][0]);
 	}
+}
+
+void COpenglContext::selectObject(bool multiple, POINT &clickPoint)
+{
+	
+	int mouse_x = clickPoint.x;
+	int mouse_y = clickPoint.y;
+
+	float x = (2.0f * mouse_x) / width - 1.0f;
+	float y = 1.0f - (2.0f * mouse_y) / height;
+	float z = 1.0f;
+	vec4 ray_clip = vec4(x, y, -1.0, 1.0);
+	vec4 ray_eye = inverse(proj) * ray_clip;
+	ray_eye = vec4(ray_eye.x, ray_eye.y, -1.0, 0.0);
+	vec3 ray_wor = vec3((inverse(view) * ray_eye));
+	ray_wor = normalize(ray_wor);
+	
+	vec3 intersect=vec3(10000, 10000, 10000); short selected=-1;
+	for (int i = 0; i < fieldObjects.size(); i++)
+	{
+		vec3 temp_intersect;
+		if (fieldObjects[i]->selectionRayTry(ray_wor, pov, temp_intersect))
+		{
+			if (distance(pov, temp_intersect) < distance(pov, intersect))
+			{
+				intersect = temp_intersect;
+				selected = i;
+			}
+		}
+	}
+	if (selected >= 0)
+	{
+		if (multiple)
+		{
+			if (selectedObjects.count(selected))
+			{
+				selectedObjects.erase(selected);
+				fieldObjects[selected]->selectionMode = 0;
+			}
+			else
+			{
+				selectedObjects.insert(selected);
+				fieldObjects[selected]->selectionMode = 1;
+			}
+		}
+		else
+		{
+				for (auto j = selectedObjects.begin(); j != selectedObjects.end(); j++)
+					fieldObjects[*j]->selectionMode = 0;
+				selectedObjects.clear();
+				selectedObjects.insert(selected);
+				fieldObjects[selected]->selectionMode = 1;
+			}
+	}
+	else
+	{
+		for (auto j = selectedObjects.begin(); j != selectedObjects.end(); j++)
+				fieldObjects[(*j)]->selectionMode = 0;
+			selectedObjects.clear();
+	}
+
+	return;
 }
 
 void COpenglContext::addObject(glm::vec3 pos, glm::vec3 rot, glm::vec3 scale, GLuint sidesNum, GLfloat height, GLfloat width, glm::vec4 color)

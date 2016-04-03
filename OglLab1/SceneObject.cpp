@@ -4,6 +4,55 @@
 #include <math.h>
 #include <glm/gtx/rotate_vector.hpp>
 using namespace glm;
+
+#ifdef _DEBUG
+
+#include <iostream>
+using namespace std;
+//#define CONSOLE_DEBUG
+
+#endif
+#define EPSILON 0.000001
+bool floatEquality(float &a, float &b)
+{
+	return (a - EPSILON<b + EPSILON&& a + EPSILON>b - EPSILON);
+}
+//
+//bool isInsideTriangle(const vec3& pt, const vec3& v0, const vec3& v1, const vec3& v2, const vec3& normal)
+//{
+//	short tmp = 0;
+//	if (dot(cross(v1 - v0, pt - v0), normal) < EPSILON)
+//		tmp++;
+//	else
+//		tmp--;
+//	if (dot(cross(v2 - v1, pt - v1), normal)<EPSILON)
+//		tmp++;
+//	else
+//		tmp--;	
+//	if (dot(cross(v2 - v1, pt - v1), normal)<EPSILON)
+//		tmp++;
+//	else
+//		tmp--;	
+//	return (tmp==3||tmp==-3);
+//}
+float triangle_square(float a, float b, float c) {
+	float p = (a + b + c) / 2;
+	return sqrt(p*(p - a)*(p - b)*(p - c));
+}
+bool inside_triangle(vec3 P, vec3 A, vec3 B, vec3 C) 
+{
+	float AB = distance(A, B);
+	float BC = distance(B, C);
+	float CA = distance(C, A);
+
+	float AP = distance(A, P);
+	float BP = distance(B, P);
+	float CP = distance(C, P);
+	float diff = (triangle_square(AP, BP, AB) + triangle_square(AP, CP, CA) + triangle_square(BP, CP, BC)) - triangle_square(AB, BC, CA);
+	if (fabs(diff)<EPSILON) return true;
+	return false;
+}
+
 CSceneObject::CSceneObject(GLuint vao=0, vec3 pos = vec3(0), vec3 rot = vec3(0), vec3 scal = vec3(1))
 {
 	position = pos;
@@ -15,7 +64,7 @@ CSceneObject::CSceneObject(GLuint vao=0, vec3 pos = vec3(0), vec3 rot = vec3(0),
 
 
 CSceneObject::~CSceneObject()
-{
+{	
 }
 
 void CSceneObject::draw(GLuint a,GLuint k, GLuint b , GLuint c, mat4* d, GLuint e)
@@ -27,9 +76,14 @@ void CSceneObject::setScale(vec3 _scale)
 	scale = _scale;
 }
 
+void CSceneObject::move(glm::vec3 _pos)
+{
+	position += _pos;
+}
+
 void CSceneObject::translate(vec3 _pos)
 {
-	position +=_pos;
+	position =_pos;
 }
 
 void CSceneObject::rotate(vec3)
@@ -39,6 +93,21 @@ void CSceneObject::rotate(vec3)
 void CSceneObject::projection(GLushort d)
 {
 	drawProjection = d;
+}
+
+vec3 CSceneObject::getScale()
+{
+	return scale;
+}
+
+vec3 CSceneObject::getPos()
+{
+	return position;
+}
+
+vec3 CSceneObject::getRotation()
+{
+	return rotation;
 }
 
 
@@ -76,7 +145,7 @@ void CPolygonalPrismObject::draw(GLuint vao, GLuint translateID,GLuint colorUnif
 	glDisableVertexAttribArray(1);
 	if (selectionMode)
 	{
-		vec4 selectionCol = vec4(0xff / 0x100, 0xa5 / 0x100, 0x00, 1);
+		vec4 selectionCol = vec4(1, 0.645f, 0, 1);
 		glUniform4fv(colorUniformID, 1, &selectionCol[0]);
 		glEnableVertexAttribArray(0);
 
@@ -199,11 +268,6 @@ void CPolygonalPrismObject::rotate(vec3 rot)
 	glBufferData(GL_ARRAY_BUFFER, normals.size()*sizeof(vec3), &normals[0], GL_STATIC_DRAW);
 }
 
-GLboolean CPolygonalPrismObject::selectionRayTry(vec3, vec3, vec3 &)
-{
-	return GLboolean();
-}
-
 
 vec3 findNormal(vec3 coor2, vec3 coor1, vec3 coor0)
 {
@@ -215,6 +279,15 @@ vec3 findNormal(vec3 coor2, vec3 coor1, vec3 coor0)
 		a.z * b.x - a.x * b.z,
 		a.x * b.y - b.x * a.y
 		);
+}
+glm::vec3 computeNormal
+(
+	glm::vec3 const & a,
+	glm::vec3 const & b,
+	glm::vec3 const & c
+	)
+{
+	return glm::normalize(glm::cross(c - a, b - a));
 }
 
 
@@ -281,7 +354,7 @@ CPolygonalPrismObject::CPolygonalPrismObject(GLuint vao=0, vec3 pos=vec3(0), vec
 	tmp_vertices.clear();
 	for (int i = 0; i < vertices.size() / 3; i++)
 	{
-		normals[3 * i] = normalize(findNormal(vertices[3 * i], vertices[3 * i + 1], vertices[3 * i + 2]));
+		normals[3 * i] = normalize(computeNormal(vertices[3 * i], vertices[3 * i + 1], vertices[3 * i + 2]));
 		normals[3 * i + 1] = normals[3 * i];
 		normals[3 * i + 2] = normals[3 * i];
 
@@ -324,4 +397,47 @@ CPolygonalPrismObject::~CPolygonalPrismObject()
 	glDeleteBuffers(1, &normalsBuffer);
 
 }
+GLboolean CPolygonalPrismObject::selectionRayTry(vec3 pickingRay, vec3 observingPoint, vec3 &intersectionPoint)
+{
+	vec4 plane, tmp_plane;
+	bool get = false;
+	vec3 intersection1, intersection2;
+	for (int i = 0; i < vertices.size() / 3; i++)
+	{
+		vec3 vertices_[3];
+		vertices_[0] = vertices[3 * i] + position;
+		vertices_[1] = vertices[3 * i + 1] + position;
+		vertices_[2] = vertices[3 * i + 2] + position;
+		vec3 n = normals[3 * i];
 
+		float D = -dot(n,vertices_[0]);
+		float dD = D + dot(n, observingPoint);
+		float l = abs(dD / (n.x*pickingRay.x + n.y*pickingRay.y + n.z*pickingRay.z));
+
+		if (l == 0) continue;
+		vec3 plane_intersection = pickingRay*l+observingPoint;
+		if (fabs(dot(plane_intersection, n) + D) > EPSILON)
+			continue;
+
+		if (inside_triangle(plane_intersection, vertices_[0], vertices_[1], vertices_[2])){
+			if (get){
+				intersection2 = plane_intersection;
+				break;
+			}
+			else{
+				intersection1 = plane_intersection;
+				get = true;
+			}
+		}
+	}
+	
+	if (get){
+		if (distance(intersection1, observingPoint) > distance(intersection2, observingPoint))
+			intersectionPoint = intersection2;
+		else
+			intersectionPoint = intersection1;
+		return true;
+	}
+	else
+		return false;
+}
