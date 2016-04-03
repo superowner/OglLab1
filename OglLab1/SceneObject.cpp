@@ -60,6 +60,7 @@ CSceneObject::CSceneObject(GLuint vao=0, vec3 pos = vec3(0), vec3 rot = vec3(0),
 	scale = scal;
 	selectionMode = false;
 	drawProjection = 0;
+	colour = vec4(1);
 }
 
 
@@ -95,6 +96,11 @@ void CSceneObject::projection(GLushort d)
 	drawProjection = d;
 }
 
+void CSceneObject::setColor(vec4 a)
+{
+	colour = a;
+}
+
 vec3 CSceneObject::getScale()
 {
 	return scale;
@@ -108,6 +114,11 @@ vec3 CSceneObject::getPos()
 vec3 CSceneObject::getRotation()
 {
 	return rotation;
+}
+
+glm::vec4 CSceneObject::getColor()
+{
+	return colour;
 }
 
 
@@ -246,14 +257,31 @@ void CPolygonalPrismObject::setScale(vec3 a)
 
 }
 
+void fixAngle(vec3 &rot)
+{
+	while (rot.x > 2*M_PI)
+		rot.x -= 2*M_PI;
+	while (rot.x < -2*M_PI)
+		rot.x += 2*M_PI;
+	while (rot.y > 2*M_PI)
+		rot.y -= 2*M_PI;
+	while (rot.y < -2*M_PI)
+		rot.y += 2*M_PI;
+	while (rot.z > 2*M_PI)
+		rot.z -= 2*M_PI;
+	while (rot.z < -2*M_PI)
+		rot.z += 2*M_PI;
+}
 
 void CPolygonalPrismObject::rotate(vec3 rot)
 {
 	rotation += rot;
+	fixAngle(rotation);
 	if (rot != vec3(0))
 	{
 		for (short i = 0; i < vertices.size(); i++)
 		{
+			rotateX(vertices[i], rot.x);
 			vertices[i] = glm::rotate<float, highp>(vertices[i], rot.x, vec3(1, 0, 0));
 			vertices[i] = glm::rotate<float, highp>(vertices[i], rot.y, vec3(0, 1, 0));
 			vertices[i] = glm::rotate<float, highp>(vertices[i], rot.z, vec3(0, 0, -1));

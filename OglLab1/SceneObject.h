@@ -4,7 +4,7 @@
 #pragma comment(lib, "glu32.lib")
 #ifdef _DEBUG
 #pragma comment(lib, "glew32d.lib")
-#pragma comment (lib, "freeglut.lib")
+//#pragma comment (lib, "freeglut.lib")
 #else
 #pragma comment(lib, "glew32.lib")
 #endif
@@ -27,6 +27,7 @@ protected:
 	GLboolean selectionMode; 
 	GLushort drawProjection; //1 - x0y, 2 - y0z, 3 - x0z
 	glm::vec3 scale;
+	glm::vec4 colour;
 	//0 - not selected; 1 - is selected. 
 	//if selected, draw lines&points increased of in certain colour
 public:
@@ -36,10 +37,11 @@ public:
 	virtual void translate(glm::vec3);
 	virtual void rotate(glm::vec3);
 	virtual void projection(GLushort); //1 - x0y, 2 - y0z, 3 - x0z
+	virtual void setColor(glm::vec4);
 	virtual glm::vec3 getScale();
 	virtual glm::vec3 getPos();
 	virtual glm::vec3 getRotation();
-
+	virtual glm::vec4 getColor();
 	virtual GLboolean selectionRayTry(glm::vec3, glm::vec3, glm::vec3&);
 
 	CSceneObject(GLuint, glm::vec3 pos, glm::vec3 rot, glm::vec3 scal);
@@ -55,7 +57,7 @@ private:
 	GLuint elementBuffer;
 	GLuint sides;
 	std::vector<glm::vec3> vertices; //size=2n;
-	glm::vec4 colour;
+	
 	std::vector<glm::vec3> normals;
 	std::vector<unsigned short> indices;
 	GLfloat height, width; //height of sides, width of

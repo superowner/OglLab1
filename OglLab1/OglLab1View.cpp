@@ -139,7 +139,7 @@ int COglLab1View::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		return -1;
 	}
 	currContext = new COpenglContext();
-
+	editor = currContext->editor;
 	/*CRect rect;
 	SystemParametersInfo(SPI_GETWORKAREA, 0, &rect, 0);
 	screen_x_size = rect.Width();

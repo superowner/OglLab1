@@ -1,6 +1,6 @@
 #pragma once
-
 #include "SceneObject.h"
+#include "Workspace.h"
 #include <vector>
 #include <set>
 
@@ -10,18 +10,16 @@ class COpenglContext
 {
 public:
 	std::vector<CSceneObject*> fieldObjects;
+	Workspace *editor;
 private:
-	vec3 pov;
-	vec2 angleFree; //horizontal-vertical for free camera
-	float FoV;
-	float mouseSpeed;
+	
+	
 	set <GLushort> selectedObjects;
 
 	
 	GLuint width, height;
 
-	vec3 direction, right, up;
-
+	
 	GLuint vao;
 	GLuint ColourID;
 	GLuint MatrixID_MV;
@@ -39,9 +37,6 @@ private:
 	vec3 lPos;
 	vec3 lightColor;
 
-	mat4 proj;
-	mat4 view;
-	
 
 	GLfloat ambientCoef;
 
@@ -52,8 +47,7 @@ private:
 
 	GLuint prog;
 
-	vec3 ray;
-public:
+	public:
 	void Init();
 	void Draw();
 	void resize(int x, int y);

@@ -113,16 +113,8 @@ COpenglContext::COpenglContext()
 	lPos = vec3(10, -10, -10);
 	lShine = 0.5f;
 	lStrength = 0.5f;
-	FoV = 45.0f;
-	mouseSpeed = 0.0005f;
-	pov = vec3(0, 2, 10);
-	angleFree = vec2(3.14, -0.698); //horizontal-vertical
-	ray = vec3(0);
-	direction = vec3(0, 0, -1);
-	right = vec3(1, 0, 0);
-	up = normalize(vec3(0, 1, 0));
-
 	width = 800; height = 600;
+	editor = new Workspace();
 	Init();
 
 }
@@ -163,24 +155,15 @@ void COpenglContext::Init()
 
 
 	
-	proj = glm::perspective(radians(FoV), (float)width / (float)height, 0.1f, 100.0f);
-	// Camera matrix
-
-	view = lookAt( pov,  // Camera is here
-		 pov + direction, // and looks here : at the same position, plus "direction"
-		 up         // Head is up (set to 0,-1,0 to look upside-down)
-		);
-
 
 
 
 	glUseProgram( prog);
-
 	// Compute the MVP matrix
 	// Send our transformation to the currently bound shader, 
 	// in the "MVP" uniform
 
-	glUniformMatrix4fv( MatrixID_Projection, 1, GL_FALSE, &proj[0][0]);
+	glUniformMatrix4fv( MatrixID_Projection, 1, GL_FALSE, &editor->proj[0][0]);
 	glUniform3fv( LightVecAmbientID, 1, & lAmbient[0]);
 	glUniform3fv( LightPosID, 1, & lPos[0]);
 	glUniform3fv( LightVecColorID, 1, & lightColor[0]);
@@ -198,7 +181,7 @@ void COpenglContext::Draw()
 
 	for (int i = 0; i < fieldObjects.size();i++)
 	{
-		fieldObjects[i]->draw(vao, translateID, ColourID, MatrixID_MV, &view, enableDirectLightID);
+		fieldObjects[i]->draw(vao, translateID, ColourID, MatrixID_MV, &editor->view, enableDirectLightID);
 	}
 }
 
@@ -207,33 +190,22 @@ void COpenglContext::resize(int x, int y)
 	if (x != 0 && y != 0)
 	{
 		height = y; width = x;
-		proj = glm::perspective(radians(FoV), (float)width / (float)height, 0.1f, 100.0f);
-		glUniformMatrix4fv(MatrixID_Projection, 1, GL_FALSE, &proj[0][0]);
+		editor->recProj(x,y);
+		glUniformMatrix4fv(MatrixID_Projection, 1, GL_FALSE, &editor->proj[0][0]);
 	}
 }
 
 void COpenglContext::selectObject(bool multiple, POINT &clickPoint)
 {
-	
-	int mouse_x = clickPoint.x;
-	int mouse_y = clickPoint.y;
-
-	float x = (2.0f * mouse_x) / width - 1.0f;
-	float y = 1.0f - (2.0f * mouse_y) / height;
-	float z = 1.0f;
-	vec4 ray_clip = vec4(x, y, -1.0, 1.0);
-	vec4 ray_eye = inverse(proj) * ray_clip;
-	ray_eye = vec4(ray_eye.x, ray_eye.y, -1.0, 0.0);
-	vec3 ray_wor = vec3((inverse(view) * ray_eye));
-	ray_wor = normalize(ray_wor);
+	vec3 ray_wor = editor->rayCalc(clickPoint);
 	
 	vec3 intersect=vec3(10000, 10000, 10000); short selected=-1;
 	for (int i = 0; i < fieldObjects.size(); i++)
 	{
 		vec3 temp_intersect;
-		if (fieldObjects[i]->selectionRayTry(ray_wor, pov, temp_intersect))
+		if (fieldObjects[i]->selectionRayTry(ray_wor, editor->pov, temp_intersect))
 		{
-			if (distance(pov, temp_intersect) < distance(pov, intersect))
+			if (distance(editor->pov, temp_intersect) < distance(editor->pov, intersect))
 			{
 				intersect = temp_intersect;
 				selected = i;
@@ -262,6 +234,7 @@ void COpenglContext::selectObject(bool multiple, POINT &clickPoint)
 				selectedObjects.clear();
 				selectedObjects.insert(selected);
 				fieldObjects[selected]->selectionMode = 1;
+				editor->setSelected(fieldObjects[selected]);
 			}
 	}
 	else
@@ -269,6 +242,7 @@ void COpenglContext::selectObject(bool multiple, POINT &clickPoint)
 		for (auto j = selectedObjects.begin(); j != selectedObjects.end(); j++)
 				fieldObjects[(*j)]->selectionMode = 0;
 			selectedObjects.clear();
+			editor->remSelected();
 	}
 
 	return;

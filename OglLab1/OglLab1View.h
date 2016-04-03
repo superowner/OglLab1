@@ -52,7 +52,7 @@ private:
 	static const char* const _ErrorStrings[];
 	const char* m_ErrorString;
 	COpenglContext *currContext;
-
+	Workspace *editor;
 	int screen_x_size, screen_y_size;
 // Generated message map functions
 protected:
