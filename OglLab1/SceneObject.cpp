@@ -4,7 +4,7 @@
 #include <math.h>
 #include <glm/gtx/rotate_vector.hpp>
 using namespace glm;
-
+#include <glm/gtx/transform.hpp>
 #ifdef _DEBUG
 
 #include <iostream>
@@ -60,6 +60,8 @@ CSceneObject::CSceneObject(GLuint vao=0, vec3 pos = vec3(0), vec3 rot = vec3(0),
 	scale = scal;
 	selectionMode = false;
 	drawProjection = 0;
+	colour = vec4(1);
+	rotateM = { 1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1 };
 }
 
 
@@ -90,9 +92,18 @@ void CSceneObject::rotate(vec3)
 {
 }
 
+void CSceneObject::rotate(glm::mat4)
+{
+}
+
 void CSceneObject::projection(GLushort d)
 {
 	drawProjection = d;
+}
+
+void CSceneObject::setColor(vec4 a)
+{
+	colour = a;
 }
 
 vec3 CSceneObject::getScale()
@@ -110,6 +121,11 @@ vec3 CSceneObject::getRotation()
 	return rotation;
 }
 
+glm::vec4 CSceneObject::getColor()
+{
+	return colour;
+}
+
 
 GLboolean CSceneObject::selectionRayTry(vec3, vec3, vec3 &)
 {
@@ -120,10 +136,12 @@ GLboolean CSceneObject::selectionRayTry(vec3, vec3, vec3 &)
 
 void CPolygonalPrismObject::draw(GLuint vao, GLuint translateID,GLuint colorUniformID, GLuint mvUniformID,mat4* view, GLuint enableDirectLightID)
 {
-	mat4 mv = (*view)*mat4(1.0);
+	mat4 t = glm::translate(position);
+	mat4 mv = (*view)*t*rotateM*mat4(1.0);
 	bool enable = 1;
+	vec3 pos = vec3(0);
 	glUniform1i(enableDirectLightID, enable);
-	glUniform3fv(translateID, 1, &position[0]);
+	glUniform3fv(translateID, 1, &pos[0]);
 	glUniformMatrix4fv(mvUniformID, 1, GL_FALSE, &mv[0][0]);
 	
 		glUniform4fv(colorUniformID, 1, &colour[0]);
@@ -145,6 +163,8 @@ void CPolygonalPrismObject::draw(GLuint vao, GLuint translateID,GLuint colorUnif
 	glDisableVertexAttribArray(1);
 	if (selectionMode)
 	{
+		bool enable = 0;
+		glUniform1i(enableDirectLightID, enable);
 		vec4 selectionCol = vec4(1, 0.645f, 0, 1);
 		glUniform4fv(colorUniformID, 1, &selectionCol[0]);
 		glEnableVertexAttribArray(0);
@@ -166,11 +186,11 @@ void CPolygonalPrismObject::draw(GLuint vao, GLuint translateID,GLuint colorUnif
 	{
 		enable = 0;
 		glUniform1i(enableDirectLightID, enable);
-		vec3 project = position;
+		vec3 project = vec3(0);
 		switch (drawProjection)
 		{
 		case 1:
-			mv = (*view)*mat4 (
+			mv = (*view)*t*rotateM*mat4 (
 				vec4(1,0,0, 0),
 				vec4(0,1,0, 0),
 				vec4(0,0,0, 0),
@@ -179,7 +199,7 @@ void CPolygonalPrismObject::draw(GLuint vao, GLuint translateID,GLuint colorUnif
 			project.z = 0;
 			break;
 		case 2:
-			mv = (*view)*mat4 (
+			mv = (*view)*t*rotateM*mat4 (
 				vec4(0,0,0, 0),
 				vec4(0,1,0, 0),
 				vec4(0,0,1, 0),
@@ -188,7 +208,7 @@ void CPolygonalPrismObject::draw(GLuint vao, GLuint translateID,GLuint colorUnif
 			project.x = 0;
 			break;
 		case 3:
-			mv = (*view)*mat4 (
+			mv = (*view)*t*rotateM*mat4 (
 				vec4(1,0,0, 0),
 				vec4(0,0,0, 0),
 				vec4(0,0,1, 0),
@@ -197,10 +217,10 @@ void CPolygonalPrismObject::draw(GLuint vao, GLuint translateID,GLuint colorUnif
 			project.y = 0;
 			break;
 		default:
-			mv = (*view)*mat4 (
-				vec4(1,0,0, position.x),
-				vec4(0,1,0, position.y),
-				vec4(0,0,1, position.z),
+			mv = (*view)*t*rotateM*mat4 (
+				vec4(1,0,0, 0),
+				vec4(0,1,0, 0),
+				vec4(0,0,1, 0),
 				vec4(0,0,0, 1)
 			);
 			break;
@@ -246,26 +266,50 @@ void CPolygonalPrismObject::setScale(vec3 a)
 
 }
 
+void fixAngle(vec3 &rot)
+{
+	while (rot.x > 2*M_PI)
+		rot.x -= 2*M_PI;
+	while (rot.x < -2*M_PI)
+		rot.x += 2*M_PI;
+	while (rot.y > 2*M_PI)
+		rot.y -= 2*M_PI;
+	while (rot.y < -2*M_PI)
+		rot.y += 2*M_PI;
+	while (rot.z > 2*M_PI)
+		rot.z -= 2*M_PI;
+	while (rot.z < -2*M_PI)
+		rot.z += 2*M_PI;
+}
 
 void CPolygonalPrismObject::rotate(vec3 rot)
 {
 	rotation += rot;
-	if (rot != vec3(0))
-	{
-		for (short i = 0; i < vertices.size(); i++)
-		{
-			vertices[i] = glm::rotate<float, highp>(vertices[i], rot.x, vec3(1, 0, 0));
-			vertices[i] = glm::rotate<float, highp>(vertices[i], rot.y, vec3(0, 1, 0));
-			vertices[i] = glm::rotate<float, highp>(vertices[i], rot.z, vec3(0, 0, -1));
-			normals[i] = glm::rotate<float, highp>(normals[i], rot.x, vec3(1, 0, 0));
-			normals[i] = glm::rotate<float, highp>(normals[i], rot.y, vec3(0, 1, 0));
-			normals[i] = glm::rotate<float, highp>(normals[i], rot.z, vec3(0, 0, -1));
-		}
-	}
-	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-	glBufferData(GL_ARRAY_BUFFER, vertices.size()*sizeof(vec3), &vertices[0], GL_STATIC_DRAW);
-	glBindBuffer(GL_ARRAY_BUFFER, normalsBuffer);
-	glBufferData(GL_ARRAY_BUFFER, normals.size()*sizeof(vec3), &normals[0], GL_STATIC_DRAW);
+	fixAngle(rotation);
+	//if (rot != vec3(0))
+	//{
+	//	for (short i = 0; i < vertices.size(); i++)
+	//	{
+	//		//rotateX(vertices[i], rot.x);
+	//		vertices[i] = glm::rotate<float, highp>(vertices[i], rot.x, vec3(1, 0, 0));
+	//		vertices[i] = glm::rotate<float, highp>(vertices[i], rot.y, vec3(0, 1, 0));
+	//		vertices[i] = glm::rotate<float, highp>(vertices[i], rot.z, vec3(0, 0, -1));
+	//		normals[i] = glm::rotate<float, highp>(normals[i], rot.x, vec3(1, 0, 0));
+	//		normals[i] = glm::rotate<float, highp>(normals[i], rot.y, vec3(0, 1, 0));
+	//		normals[i] = glm::rotate<float, highp>(normals[i], rot.z, vec3(0, 0, -1));
+	//	}
+	//}
+	//glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+	//glBufferData(GL_ARRAY_BUFFER, vertices.size()*sizeof(vec3), &vertices[0], GL_STATIC_DRAW);
+	//glBindBuffer(GL_ARRAY_BUFFER, normalsBuffer);
+	//glBufferData(GL_ARRAY_BUFFER, normals.size()*sizeof(vec3), &normals[0], GL_STATIC_DRAW);
+		rotateM = glm::rotate(rotation.x, vec3(1, 0, 0))*glm::rotate(rotation.y, vec3(0, 1, 0))*glm::rotate(rotation.z, vec3(0, 0, -1));
+
+}
+
+void CPolygonalPrismObject::rotate(glm::mat4 a)
+{
+	rotateM = a*rotateM;
 }
 
 
@@ -365,9 +409,7 @@ CPolygonalPrismObject::CPolygonalPrismObject(GLuint vao=0, vec3 pos=vec3(0), vec
 		normals[i] = glm::rotate<float, highp>(normals[i], (float)M_PI / sides, vec3(0, 1, 0));
 	}
 
-	if (rot != vec3(0))
-	{
-		for (short i = 0; i < vertices.size(); i++)
+		/*for (short i = 0; i < vertices.size(); i++)
 		{
 			vertices[i] = glm::rotate<float, highp>(vertices[i], rot.x, vec3(1, 0, 0));
 			vertices[i] = glm::rotate<float, highp>(vertices[i], rot.y, vec3(0, 1, 0));
@@ -375,8 +417,8 @@ CPolygonalPrismObject::CPolygonalPrismObject(GLuint vao=0, vec3 pos=vec3(0), vec
 			normals[i] = glm::rotate<float, highp>(normals[i], rot.x, vec3(1, 0, 0));
 			normals[i] = glm::rotate<float, highp>(normals[i], rot.y, vec3(0, 1, 0));
 			normals[i] = glm::rotate<float, highp>(normals[i], rot.z, vec3(0, 0, -1));
-		}
-	}
+		}*/
+	rotateM = glm::rotate(rot.x, vec3(1, 0, 0))*glm::rotate(rot.y, vec3(0, 1, 0))*glm::rotate(rot.z, vec3(0, 0, -1));
 	glBindVertexArray(vao);
 	glGenBuffers(1, &vertexBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
@@ -387,6 +429,13 @@ CPolygonalPrismObject::CPolygonalPrismObject(GLuint vao=0, vec3 pos=vec3(0), vec
 
 }
 
+//CPolygonalPrismObject::CPolygonalPrismObject(GLuint vao, glm::vec3 pos, glm::vec3 rot, glm::vec3 _scale, GLuint sidesNum, GLfloat height_, GLfloat width_, glm::vec4 _colour, mat4 rotation_)
+//{
+//	
+//	
+//	rotateM *= rotation_;
+//
+//}
 CPolygonalPrismObject::~CPolygonalPrismObject()
 {
 	vertices.clear();

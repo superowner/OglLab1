@@ -105,6 +105,154 @@ void COpenglContext::moveSelected()
 {
 }
 
+void COpenglContext::setCursor(CPoint a)
+{
+	cursor = a;
+}
+
+void COpenglContext::mouseWheel(short k)
+{
+	editor->changeDistance(k / 200.0);
+}
+
+void COpenglContext::setMode(mode _mode)
+{
+	Mode = _mode;
+}
+
+mode COpenglContext::getMode()
+{
+	return Mode;
+}
+
+void COpenglContext::LButtonMove(CPoint pos)
+{
+	POINT shift;
+	shift.x = pos.x - cursor.x;
+	shift.y = pos.y - cursor.y;
+
+	//lbutton
+	//click - select
+	//case selection:
+	if (Mode == selection) {
+		editor->shiftCamera(shift);
+		return;
+	}
+	if (selectedObjects.size())
+	{
+		switch (Mode)
+		{
+
+		case movement:
+			editor->shiftSelected(shift);
+			break;
+		case rotation:
+			editor->rotate(shift);
+			break;
+
+		case colour:
+			editor->shiftColor(shift);
+			break;
+
+		default:
+			break;
+		}
+	}
+}
+
+void COpenglContext::onSave(HWND hwnd)
+{
+	onClear(hwnd);
+	if (fieldObjects.size() == 0) return;
+	
+	string strTmp;
+		for each(CSceneObject* i in fieldObjects)
+		{
+			string sql = "INSERT INTO model VALUES ('"
+				+ to_string(i->getPos().x) + "', '"
+				+ to_string(i->getPos().y) + "', '"
+				+ to_string(i->getPos().z) + "', '"
+				+ to_string(i->getRotation().x) + "', '"
+				+ to_string(i->getRotation().y) + "', '"
+				+ to_string(i->getRotation().z) + "', '" 
+				+ to_string(i->getScale().x) + "', '"
+				+ to_string(i->getScale().y) + "', '"
+				+ to_string(i->getScale().z) + "', '"
+				+ to_string(i->getNum()) + "', '"
+				+ to_string(i->getHeight()) + "', '"
+				+ to_string(i->getWidth()) + "', '"
+				+ to_string(i->getColor().r) + "', '"
+				+ to_string(i->getColor().g) + "', '"
+				+ to_string(i->getColor().b) + "', '"
+				+ to_string(i->getColor().a) + "', '"
+				+ to_string(i->getRotM(0,0)) + "', '"
+				+ to_string(i->getRotM(0, 1)) + "', '"
+				+ to_string(i->getRotM(0, 2)) + "', '"
+				+ to_string(i->getRotM(0, 3)) + "', '"
+				+ to_string(i->getRotM(1,0)) + "', '"
+				+ to_string(i->getRotM(1, 1)) + "', '"
+				+ to_string(i->getRotM(1, 2)) + "', '"
+				+ to_string(i->getRotM(1, 3)) + "', '"
+				+ to_string(i->getRotM(2,0)) + "', '"
+				+ to_string(i->getRotM(2, 1)) + "', '"
+				+ to_string(i->getRotM(2, 2)) + "', '"
+				+ to_string(i->getRotM(2, 3)) + "', '"
+				+ to_string(i->getRotM(3, 0)) + "', '"
+				+ to_string(i->getRotM(3, 1)) + "', '"
+				+ to_string(i->getRotM(3, 2)) + "', '"
+				+ to_string(i->getRotM(3, 3)) + "');";
+			//sql += strTmp + ("') AS tmp WHERE NOT EXISTS (SELECT * FROM models WHERE `path` = '") + strTmp + ("') LIMIT 1;");
+	
+			mysql(&sql[0]);
+		}
+	
+	/*	if (fieldObjects.size() > 0)
+			MessageBox(hwnd, L"Data saved!", L"Success", MB_OK | MB_ICONINFORMATION);
+		else
+			MessageBox(hwnd, L"No data to save!", L"Error", MB_OK | MB_ICONSTOP);*/
+
+}
+
+void COpenglContext::onLoad(HWND hwnd)
+{
+	//onClear(hwnd);
+	vector<vector<string>> records = mysql("SELECT * FROM model;", true,  32);
+	
+	for each (CSceneObject* var in fieldObjects)
+	{
+		delete var;
+	}
+	fieldObjects.clear();
+	string buff;
+	std::string::size_type sz;     // alias of size_t   // alias of size_t
+//poligon.resize(records.size());
+	float temp[32];
+	for (int j = 0; j < records.size(); j++)
+	{
+		for (int i = 0; i < 32; i++) {
+			temp[i] = stof(records[j][i], 0);
+		}
+			addObject(vec3(temp[0], temp[1], temp[2]), vec3(temp[3], temp[4], temp[5]), vec3(temp[6], temp[7], temp[8]),
+						(int)temp[9], temp[10], temp[11], vec4(temp[12], temp[13], temp[14], temp[15]), 
+						{ 
+							temp[16], temp[17], temp[18], temp[19], 
+							temp[20], temp[21], temp[22], temp[23], 
+							temp[24], temp[25], temp[26], temp[27], 
+							temp[28], temp[29], temp[30], temp[31]
+						});
+	}
+	/*fieldObjects.clear();
+	
+		unsigned i = 0;
+		while (tmp[i].GetLength() > 0)
+		{
+			lb_var.AddString(tmp[i]);
+			i++;
+		}
+		MessageBox(hwnd, L"Data loaded!", L"Success", MB_OK | MB_ICONINFORMATION);*/
+}
+
+
 COpenglContext::COpenglContext()
 {
 	ambientCoef = 0.2;
@@ -113,16 +261,9 @@ COpenglContext::COpenglContext()
 	lPos = vec3(10, -10, -10);
 	lShine = 0.5f;
 	lStrength = 0.5f;
-	FoV = 45.0f;
-	mouseSpeed = 0.0005f;
-	pov = vec3(0, 2, 10);
-	angleFree = vec2(3.14, -0.698); //horizontal-vertical
-	ray = vec3(0);
-	direction = vec3(0, 0, -1);
-	right = vec3(1, 0, 0);
-	up = normalize(vec3(0, 1, 0));
-
 	width = 800; height = 600;
+	editor = new Workspace();
+	Mode = selection;
 	Init();
 
 }
@@ -136,7 +277,7 @@ void COpenglContext::Init()
 {
 	glGenVertexArrays(1, &vao);
 	glBindVertexArray(vao);
-	glClearColor(1.0, 1.0, 1.0, 1.0);
+	glClearColor(0.8, 0.8, 0.8, 1.0);
 
 	glClearDepth(1.0f);
 	glEnable(GL_DEPTH_TEST);
@@ -161,26 +302,14 @@ void COpenglContext::Init()
 
 	translateID = glGetUniformLocation(prog, "translate");
 
-
 	
-	proj = glm::perspective(radians(FoV), (float)width / (float)height, 0.1f, 100.0f);
-	// Camera matrix
-
-	view = lookAt( pov,  // Camera is here
-		 pov + direction, // and looks here : at the same position, plus "direction"
-		 up         // Head is up (set to 0,-1,0 to look upside-down)
-		);
-
-
-
 
 	glUseProgram( prog);
-
 	// Compute the MVP matrix
 	// Send our transformation to the currently bound shader, 
 	// in the "MVP" uniform
 
-	glUniformMatrix4fv( MatrixID_Projection, 1, GL_FALSE, &proj[0][0]);
+	glUniformMatrix4fv( MatrixID_Projection, 1, GL_FALSE, &editor->proj[0][0]);
 	glUniform3fv( LightVecAmbientID, 1, & lAmbient[0]);
 	glUniform3fv( LightPosID, 1, & lPos[0]);
 	glUniform3fv( LightVecColorID, 1, & lightColor[0]);
@@ -188,17 +317,54 @@ void COpenglContext::Init()
 	glUniform1f( LightShineID,  lShine);
 	glUniform1f( LightStrengthID,  lStrength);
 	
-	
+	for (int i = -10; i < 11; i++)
+	{
+		coordLines.push_back(vec3(-10, 0, i));
+		coordLines.push_back(vec3(10, 0, i));
+		coordLines.push_back(vec3(i, 0, -10));
+		coordLines.push_back(vec3(i, 0, 10));
+	}
+
+	glBindVertexArray(vao);
+	glGenBuffers(1, &coordBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, coordBuffer);
+	glBufferData(GL_ARRAY_BUFFER, coordLines.size()*sizeof(vec3), &coordLines[0], GL_STATIC_DRAW);
+
 }
 void COpenglContext::Draw()
 {
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glUseProgram(this->prog);
+	
+	glLineWidth(2.0);
+	mat4 mv = (editor->view);
+	bool enable = 0;
+	vec4 lineCol = vec4(0, 0, 0, 1);
+	glUniform1i(enableDirectLightID, enable);
+	glUniform3fv(translateID, 1, &lineCol[0]);
+	glUniformMatrix4fv(MatrixID_MV, 1, GL_FALSE, &mv[0][0]);
+	
+	glUniform4fv(ColourID, 1, &lineCol[0]);
+
+	glBindVertexArray(vao);
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, coordBuffer);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glEnableVertexAttribArray(1);
+	glBindBuffer(GL_ARRAY_BUFFER, coordBuffer);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+
+	//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer);
+	glDrawArrays(GL_LINES, 0, coordLines.size());
+
+	//glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_SHORT, (void*)0);
+	glDisableVertexAttribArray(0);
+	glDisableVertexAttribArray(1);
 
 	for (int i = 0; i < fieldObjects.size();i++)
 	{
-		fieldObjects[i]->draw(vao, translateID, ColourID, MatrixID_MV, &view, enableDirectLightID);
+		fieldObjects[i]->draw(vao, translateID, ColourID, MatrixID_MV, &editor->view, enableDirectLightID);
 	}
 }
 
@@ -207,33 +373,22 @@ void COpenglContext::resize(int x, int y)
 	if (x != 0 && y != 0)
 	{
 		height = y; width = x;
-		proj = glm::perspective(radians(FoV), (float)width / (float)height, 0.1f, 100.0f);
-		glUniformMatrix4fv(MatrixID_Projection, 1, GL_FALSE, &proj[0][0]);
+		editor->recProj(x,y);
+		glUniformMatrix4fv(MatrixID_Projection, 1, GL_FALSE, &editor->proj[0][0]);
 	}
 }
 
 void COpenglContext::selectObject(bool multiple, POINT &clickPoint)
 {
-	
-	int mouse_x = clickPoint.x;
-	int mouse_y = clickPoint.y;
-
-	float x = (2.0f * mouse_x) / width - 1.0f;
-	float y = 1.0f - (2.0f * mouse_y) / height;
-	float z = 1.0f;
-	vec4 ray_clip = vec4(x, y, -1.0, 1.0);
-	vec4 ray_eye = inverse(proj) * ray_clip;
-	ray_eye = vec4(ray_eye.x, ray_eye.y, -1.0, 0.0);
-	vec3 ray_wor = vec3((inverse(view) * ray_eye));
-	ray_wor = normalize(ray_wor);
+	vec3 ray_wor = editor->rayCalc(clickPoint);
 	
 	vec3 intersect=vec3(10000, 10000, 10000); short selected=-1;
 	for (int i = 0; i < fieldObjects.size(); i++)
 	{
 		vec3 temp_intersect;
-		if (fieldObjects[i]->selectionRayTry(ray_wor, pov, temp_intersect))
+		if (fieldObjects[i]->selectionRayTry(ray_wor, editor->pov, temp_intersect))
 		{
-			if (distance(pov, temp_intersect) < distance(pov, intersect))
+			if (distance(editor->pov, temp_intersect) < distance(editor->pov, intersect))
 			{
 				intersect = temp_intersect;
 				selected = i;
@@ -262,6 +417,7 @@ void COpenglContext::selectObject(bool multiple, POINT &clickPoint)
 				selectedObjects.clear();
 				selectedObjects.insert(selected);
 				fieldObjects[selected]->selectionMode = 1;
+				editor->setSelected(fieldObjects[selected]);
 			}
 	}
 	else
@@ -269,6 +425,7 @@ void COpenglContext::selectObject(bool multiple, POINT &clickPoint)
 		for (auto j = selectedObjects.begin(); j != selectedObjects.end(); j++)
 				fieldObjects[(*j)]->selectionMode = 0;
 			selectedObjects.clear();
+			editor->remSelected();
 	}
 
 	return;
@@ -279,4 +436,45 @@ void COpenglContext::addObject(glm::vec3 pos, glm::vec3 rot, glm::vec3 scale, GL
 
 	CPolygonalPrismObject* a = new CPolygonalPrismObject(vao, pos, rot, scale, sidesNum, height, width, color);
 	fieldObjects.push_back(a);
+}
+void COpenglContext::addObject(glm::vec3 pos, glm::vec3 rot, glm::vec3 scale, GLuint sidesNum, GLfloat height, GLfloat width, glm::vec4 color, glm::mat4 rotation)
+{
+	CPolygonalPrismObject* a = new CPolygonalPrismObject(vao, pos, rot, scale, sidesNum, height, width, color, rotation);
+	fieldObjects.push_back(a);
+}
+void COpenglContext::RButtonMove(CPoint pos)
+{
+	POINT shift;
+	shift.x = pos.x - cursor.x;
+	shift.y = pos.y - cursor.y;
+	
+	//lbutton
+	//click - select
+	//
+	switch (Mode)
+	{
+	case selection:
+		editor->rotateCamera(shift);
+		break;
+	case movement:
+		editor->shiftCamera(shift);
+		break;
+	case rotation:
+		editor->rotateCamera(shift);
+		break;
+	case colour:
+		editor->shiftColor(shift);
+		break;
+	default:
+		break;
+	}
+
+
+}
+void COpenglContext::onClear(HWND hwnd)
+{
+
+	mysql("DELETE FROM model;");
+	//cout << "Data cleared!";
+//	MessageBox(hwnd, L"Data cleared!", L"Success", MB_OK | MB_ICONINFORMATION);
 }
