@@ -18,10 +18,30 @@
 
 
 // COglLab1View
-
+//static UINT BASED_CODE buttons[] =
+//{
+//	// same order as in the bitmap 'toolbar.bmp'
+//	ID_CUBE_ADD,
+//	ID_PRISM_ADD,
+//	ID_SHIFT_MODE,
+//	ID_ROTATE_MODE,
+//	ID_SELECT_MODE,
+//	ID_COLOR_MODE,
+//	ID_CAMERA_MODE,
+//	ID_FILE_SAVE,
+//	ID_FILE_OPEN//,
+//};
 IMPLEMENT_DYNCREATE(COglLab1View, CView)
 
 BEGIN_MESSAGE_MAP(COglLab1View, CView)
+	ON_COMMAND(ID_CUBE_ADD, OnCubeCreate)
+	ON_COMMAND(ID_PRISM_ADD, OnPrismCreate)
+	ON_COMMAND(ID_SHIFT_MODE, OnShiftMode)
+	ON_COMMAND(ID_ROTATE_MODE, OnRotateMode)
+	ON_COMMAND(ID_SELECT_MODE, OnSelectMode)
+	ON_COMMAND(ID_COLOR_MODE, OnColorMode)
+	ON_COMMAND(ID_SAVE, OnSave)
+	ON_COMMAND(ID_LOAD, OnLoad)
 	ON_WM_CREATE()
 	ON_WM_DESTROY()
 	ON_WM_PAINT()
@@ -29,6 +49,9 @@ BEGIN_MESSAGE_MAP(COglLab1View, CView)
 	ON_WM_ERASEBKGND()
 	ON_WM_TIMER()
 	ON_WM_LBUTTONDOWN()
+	ON_WM_MOUSEMOVE()
+	ON_WM_MOUSEWHEEL()
+	ON_WM_RBUTTONDOWN()
 END_MESSAGE_MAP()
 
 // COglLab1View construction/destruction
@@ -120,13 +143,46 @@ void CreateConsole(HWND hwnd)
 	}
 
 }
+void COglLab1View::OnCubeCreate()
+{
+		currContext->addObject(vec3(0), vec3(0), vec3(1), 4, 2, 2, vec4(5.f / 10.f, 0, 1.0, 1));
+}
+void COglLab1View::OnPrismCreate()
+{
+	currContext->addObject(vec3(0), vec3(0), vec3(1), 6, 2, 1, vec4(5.f / 10.f, 0, 0.5f, 1));
+}
+void COglLab1View::OnShiftMode()
+{
+	currContext->setMode(movement);
+}
+void COglLab1View::OnRotateMode()
+{
+	currContext->setMode(rotation);
+}
+void COglLab1View::OnSelectMode()
+{
+	currContext->setMode(selection);
+}
+void COglLab1View::OnColorMode()
+{
+
+	currContext->setMode(colour);
+}
+void COglLab1View::OnSave()
+{
+	currContext->onSave(m_hWnd);
+}
+void COglLab1View::OnLoad()
+{
+	currContext->onLoad(m_hWnd);
+}
 int COglLab1View::OnCreate(LPCREATESTRUCT lpCreateStruct)
 {
 	if (CView::OnCreate(lpCreateStruct) == -1)
 		return -1;
 
 	// TODO:  Add your specialized creation code here
-
+	
 #ifdef _DEBUG
 	CreateConsole(m_hWnd);
 #endif
@@ -146,8 +202,7 @@ int COglLab1View::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	screen_y_size = rect.Height();
 */
 	currContext->resize(800, 600);
-	for (int i = 0; i < 2; i++)
-		currContext->addObject(vec3(i, 2 * i, -4 * i), vec3(0), vec3(1), 4, 2, 2, vec4((i + 5) / 10, 0, 1.0, 1));
+	
 	// We now have a rendering context, so we can set the initial drawing state.
 	// Find the initialize OpenGL function provided in the Lab 1 notes and call it here
 	//	OnDraw(NULL);
@@ -422,6 +477,45 @@ void COglLab1View::OnTimer(UINT_PTR nIDEvent)
 void COglLab1View::OnLButtonDown(UINT nFlags, CPoint point)
 {
 	// TODO: Add your message handler code here and/or call default
+	if(currContext->getMode()==selection)
 	currContext->selectObject(false, point);
+
 	CView::OnLButtonDown(nFlags, point);
+}
+
+
+void COglLab1View::OnMouseMove(UINT nFlags, CPoint point)
+{
+	static CPoint prev = point;
+	switch (nFlags)
+	{
+	/*case MK_MBUTTON:
+
+		break;*/
+	case MK_LBUTTON:
+		currContext->LButtonMove(point);
+		currContext->setCursor(point);
+		break;
+	case MK_RBUTTON:
+		currContext->RButtonMove(point);
+		currContext->setCursor(point);
+		break;
+	default:
+		currContext->setCursor(point);
+		break;
+	}
+}
+
+BOOL COglLab1View::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt)
+{
+	currContext->mouseWheel(zDelta);
+	return 0;
+}
+
+
+void COglLab1View::OnRButtonDown(UINT nFlags, CPoint point)
+{
+	// TODO: Add your message handler code here and/or call default
+
+	CView::OnRButtonDown(nFlags, point);
 }

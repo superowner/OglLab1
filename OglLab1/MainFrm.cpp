@@ -27,6 +27,18 @@ static UINT indicators[] =
 	ID_INDICATOR_SCRL,
 };
 
+static UINT BASED_CODE buttons[] =
+{
+	// same order as in the bitmap 'toolbar.bmp'
+	ID_CUBE_ADD,
+	ID_PRISM_ADD,
+	ID_SHIFT_MODE,
+	ID_ROTATE_MODE,
+	ID_SELECT_MODE,
+	ID_COLOR_MODE,
+	ID_SAVE,
+	ID_LOAD//,
+};
 // CMainFrame construction/destruction
 
 CMainFrame::CMainFrame()
@@ -42,6 +54,25 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 {
 	if (CFrameWnd::OnCreate(lpCreateStruct) == -1)
 		return -1;
+
+	if (!m_wndToolBar.Create(this) ||
+		!m_wndToolBar.LoadBitmap(IDR_TOOLBAR1) ||
+
+		!m_wndToolBar.SetButtons(buttons,
+			sizeof(buttons) / sizeof(UINT)))
+	{
+		TRACE0("Failed to create toolbar\n");
+		return -1;      // fail to create
+	}
+
+	// TODO: Delete these three lines if you don't want the toolbar to
+	//  be dockable
+	m_wndToolBar.EnableDocking(CBRS_ALIGN_ANY);
+	EnableDocking(CBRS_ALIGN_ANY);
+	DockControlBar(&m_wndToolBar);
+
+	m_wndToolBar.SetBarStyle(m_wndToolBar.GetBarStyle() |
+		CBRS_TOOLTIPS | CBRS_FLYBY | CBRS_SIZE_DYNAMIC);
 
 	if (!m_wndStatusBar.Create(this))
 	{

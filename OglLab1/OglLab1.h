@@ -8,7 +8,7 @@
 #endif
 
 #include "resource.h"       // main symbols
-#include "OpenglContext.h"
+
 
 // COglLab1App:
 // See OglLab1.cpp for the implementation of this class

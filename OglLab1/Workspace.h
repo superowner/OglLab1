@@ -34,6 +34,7 @@ public:
 	vec3 rayCalc(POINT&);
 	void freeMove(POINT shift);
 	void changeColor(vec4 newcolor);
+	void shiftColor(POINT shift);
 	void axisMove(UINT axis, POINT shift);
 	void setPoV(vec3 a) { pov = a; }
 	void setDirection(vec3 dir) { direction = dir; }
@@ -44,7 +45,7 @@ public:
 
 	void changeDistance(float shift);
 
-	void scale(POINT mouseShift, POINT);
+	void scale(POINT mouseShift);
 	void rotate(POINT mouseShift);
 
 

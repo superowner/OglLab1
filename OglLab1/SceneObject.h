@@ -3,6 +3,7 @@
 #pragma comment(lib, "opengl32.lib")
 #pragma comment(lib, "glu32.lib")
 #ifdef _DEBUG
+
 #pragma comment(lib, "glew32d.lib")
 //#pragma comment (lib, "freeglut.lib")
 #else
@@ -24,6 +25,7 @@ class CSceneObject
 protected:
 	glm::vec3 position;
 	glm::vec3 rotation;
+	glm::mat4 rotateM;
 	GLboolean selectionMode; 
 	GLushort drawProjection; //1 - x0y, 2 - y0z, 3 - x0z
 	glm::vec3 scale;
@@ -36,8 +38,13 @@ public:
 	virtual void move(glm::vec3);
 	virtual void translate(glm::vec3);
 	virtual void rotate(glm::vec3);
+	virtual void rotate(glm::mat4);
 	virtual void projection(GLushort); //1 - x0y, 2 - y0z, 3 - x0z
 	virtual void setColor(glm::vec4);
+	virtual int getNum() { return 0; }
+	virtual float getWidth() { return 0; }
+	virtual float getHeight() { return 0; }
+	virtual float getRotM(int i, int j) { return rotateM[i][j]; }
 	virtual glm::vec3 getScale();
 	virtual glm::vec3 getPos();
 	virtual glm::vec3 getRotation();
@@ -65,9 +72,14 @@ public:
 	void draw(GLuint, GLuint,GLuint, GLuint, glm::mat4*, GLuint);
 	void setScale(glm::vec3);
 	void rotate(glm::vec3);
+	void rotate(glm::mat4);
 	GLboolean selectionRayTry(glm::vec3, glm::vec3, glm::vec3&);
+	int getNum() { return sides; }
+	float getWidth() { return width; }
+	float getHeight() { return height; }
 	//GLuint translateID;
 	CPolygonalPrismObject(GLuint, glm::vec3 pos, glm::vec3 rot, glm::vec3 scale , GLuint sidesNum, GLfloat height, GLfloat width, glm::vec4 color);
+	CPolygonalPrismObject(GLuint vao, glm::vec3 pos, glm::vec3 rot, glm::vec3 scale, GLuint sidesNum, GLfloat height, GLfloat width, glm::vec4 color, glm::mat4 rotation) :CPolygonalPrismObject(vao, pos, rot, scale, sidesNum, height, width, color) { rotateM = rotation; }
 	~CPolygonalPrismObject();
 	extern friend class COpenglContext;
 

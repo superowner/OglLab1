@@ -6,7 +6,7 @@ Workspace::Workspace(int _width, int _height)
 {
 	width = _width; height = _height;
 	FoV = 45.0f;
-	mouseSpeed = 0.0005f;
+	mouseSpeed = 0.001f;
 	pov = vec3(0, 2, 10);
 	//angleFree = vec2(3.14, -0.698); //horizontal-vertical
 	direction = vec3(0, 0, -1);
@@ -14,6 +14,8 @@ Workspace::Workspace(int _width, int _height)
 	up = normalize(vec3(0, 1, 0));
 	recView();
 	recProj(width, height);
+	selected = nullptr;
+	center = nullptr;
 }
 
 
@@ -23,7 +25,7 @@ Workspace::~Workspace()
 
 void Workspace::rotateCamera(POINT shift)
 {
-	if (center)
+	if (selected)
 		rotatePoV(shift);
 	else
 		rotateDirection(shift);
@@ -31,17 +33,28 @@ void Workspace::rotateCamera(POINT shift)
 
 void Workspace::rotatePoV(POINT shift)
 {
+	*center = selected->getPos();
 	int mouse_x = shift.x;
 	int mouse_y = shift.y;
-
-	
-	pov = rotateX(vec3(pov - *center), mouseSpeed*mouse_x);
-	pov = rotateY<float, highp>(pov, mouseSpeed*mouse_y) + *center;
-	direction = normalize(pov - *center);
-	up = rotateX(up, -mouseSpeed*mouse_x);
-	up = rotateY(up, -mouseSpeed*mouse_x);
-	right = rotateX(right, -mouseSpeed*mouse_x);
-	right = rotateY(right, -mouseSpeed*mouse_x);
+//	mouseSpeed = 0.00001;
+	direction = normalize(*center-pov);
+//нужен вектор касательной, который смотрит вверх. 
+	// есть сфера. ≈сть рассто€ние до точки. ≈сть ось.
+	//up-dir=l*h
+	//dir, h - известны
+	//если мы найдем длину перпендикул€ра на ось - узнаем угол
+	//зна€ угол, можно найти длину гипотенузы
+	float d = (pov - *center).y;
+	float cos = d / length(pov - *center);
+	float h = length(pov - *center) / cos;
+	up = normalize(vec3(0, h, 0) - pov + *center);
+	right = cross(direction, up);
+	pov = glm::rotate(vec3(pov - *center), -mouseSpeed*mouse_x, up);
+	direction = glm::rotate(direction, mouseSpeed*mouse_x, up);
+	pov = glm::rotate(pov, -mouseSpeed*mouse_y, right) + *center;
+	right = glm::rotate(right, mouseSpeed*mouse_x, up);
+	direction = glm::rotate(direction, mouseSpeed*mouse_y, right);
+	up = glm::rotate(up, mouseSpeed*mouse_y, right);
 
 	recView();
 }
@@ -52,48 +65,61 @@ void Workspace::rotateDirection(POINT shift)
 	int mouse_y = shift.y;
 
 
-	direction = rotateX(direction, mouseSpeed*mouse_x);
-	direction = rotateY(direction, mouseSpeed*mouse_y);
-
+	direction = glm::rotate(direction, -mouseSpeed*mouse_x, up);
+	right = glm::rotate(right, -mouseSpeed*mouse_x, up);
+	direction = glm::rotate(direction, -mouseSpeed*mouse_y, right);
+	up = glm::rotate(up, -mouseSpeed*mouse_y, right);
+/*
 	up = rotateX(up, mouseSpeed*mouse_x);
 	up = rotateY(up, mouseSpeed*mouse_y);
 
 	right = rotateX(right, mouseSpeed*mouse_x);
 	right = rotateY(right, mouseSpeed*mouse_y);
-
+*/
 	recView();
 }
 
 void Workspace::shiftCamera(POINT shift)
 {
-	POINT fake; fake.x = width; fake.y = height/2;
-	vec3 normal = cross(up, right);
-	float d = -dot(normal, selected->getPos());
-	float dD = d + dot(normal, pov);
+	if (selected)
+	{
+		POINT fake; fake.x = width; fake.y = height / 2;
+		vec3 normal = cross(up, right);
+		float d = -dot(normal, selected->getPos());
+		float dD = d + dot(normal, pov);
 
-	vec3 right = rayCalc(fake);
-	float l = abs(dD / dot(normal,right));
-	right = right*l + pov;
-	
-	fake.x = 0;
-	vec3 left = rayCalc(fake);
-	l = abs(dD / dot(normal, left));
-	left = left*l + pov;
+		vec3 right = rayCalc(fake);
+		float l = abs(dD / dot(normal, right));
+		right = right*l + pov;
 
-	fake.x = width / 2; fake.y = 0;
-	vec3 bottom = rayCalc(fake);
-	l = abs(dD / dot(normal, bottom));
-	bottom = bottom*l + pov;
+		fake.x = 0;
+		vec3 left = rayCalc(fake);
+		l = abs(dD / dot(normal, left));
+		left = left*l + pov;
 
-	fake.y = height;
-	vec3 top = rayCalc(fake);
-	l = abs(dD / dot(normal, top));
-	top = top*l + pov;
+		fake.x = width / 2; fake.y = 0;
+		vec3 bottom = rayCalc(fake);
+		l = abs(dD / dot(normal, bottom));
+		bottom = bottom*l + pov;
 
-	vec3 dX = (right - left) / (float)width;
-	vec3 dY = (top - bottom) / (float)height;
-	pov += dX*(float)shift.x + dY*(float)shift.y;
-	recView();
+		fake.y = height;
+		vec3 top = rayCalc(fake);
+		l = abs(dD / dot(normal, top));
+		top = top*l + pov;
+
+		vec3 dX = -(right - left) / (float)width;
+		vec3 dY = -(top - bottom) / (float)height;
+		pov += dX*(float)shift.x + dY*(float)shift.y;
+		recView();
+	}
+	else
+	{
+		vec3 dX = -mouseSpeed*right*length(pov)*2.f;
+		vec3 dY = mouseSpeed*up*length(pov)*2.f;
+		pov += dX*(float)shift.x + dY*(float)shift.y;
+		recView();
+
+	}
 }
 
 void Workspace::shiftSelected(POINT shift)
@@ -166,6 +192,36 @@ void Workspace::changeColor(vec4 newcolor)
 {
 	if (selected)
 		selected->setColor(newcolor);
+}
+void Workspace::shiftColor(POINT shift)
+{
+	POINT fake; fake.x = width; fake.y = height / 2;
+	vec3 normal = cross(up, right);
+	float d = -dot(normal, selected->getPos());
+	float dD = d + dot(normal, pov);
+
+	vec3 right = rayCalc(fake);
+	float l = abs(dD / dot(normal, right));
+	right = right*l + pov;
+
+	fake.x = 0;
+	vec3 left = rayCalc(fake);
+	l = abs(dD / dot(normal, left));
+	left = left*l + pov;
+
+	fake.x = width / 2; fake.y = 0;
+	vec3 bottom = rayCalc(fake);
+	l = abs(dD / dot(normal, bottom));
+	bottom = bottom*l + pov;
+
+	fake.y = height;
+	vec3 top = rayCalc(fake);
+	l = abs(dD / dot(normal, top));
+	top = top*l + pov;
+
+	vec3 dX = (right - left) / (float)width;
+	vec3 dY = (top - bottom) / (float)height;
+	selected->setColor(vec4(normalize(vec3(selected->getColor())+dX*(float)shift.x + dY*(float)shift.y), 1));
 }
 //ƒальше идет костыль. »бо этот момент даже в 3д редакторах не совсем адекватно реализован -_-
 void Workspace::axisMove(UINT axis, POINT shift)//0=x, 1=y, 2=z
@@ -240,15 +296,19 @@ void Workspace::changeDistance(float shift)
 	pov -= shift*direction;
 }
 
-void Workspace::scale(POINT shift, POINT curr)
+void Workspace::scale(POINT shift)
 {
+
+
+
 }
 
 void Workspace::rotate(POINT shift)
 {
 	int mouse_x = shift.x;
 	int mouse_y = shift.y;
-
-	selected->rotate(vec3(mouse_x*mouseSpeed, mouse_y*mouseSpeed, 0));
+	mat4 rotateM= glm::rotate(mouse_x*mouseSpeed*10.f, up)*glm::rotate(mouse_y*mouseSpeed*10.f, right);
+	recView();
+	selected->rotate(rotateM);
 
 }

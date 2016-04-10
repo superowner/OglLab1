@@ -4,7 +4,7 @@
 
 #pragma once
 
-
+#include "OpenglContext.h"
 class COglLab1View : public CView
 {
 protected: // create from serialization only
@@ -39,14 +39,14 @@ protected:
 	virtual BOOL GetOldStyleRenderingContext(void);
 	virtual BOOL SetupPixelFormat(void);
 
-
+	//CToolBar m_wndToolBar;
 private:
 	//OpenGL Setup
 	BOOL GetRenderingContext();
 	//Rendering Context and Device Context Pointers
 	HGLRC     m_hRC;
 	CDC*      m_pDC;
-
+	
 	//Error Handling
 	void SetError(int e);
 	static const char* const _ErrorStrings[];
@@ -58,6 +58,14 @@ private:
 protected:
 	DECLARE_MESSAGE_MAP()
 public:
+	afx_msg void OnCubeCreate();
+	afx_msg void OnPrismCreate();
+	afx_msg void OnShiftMode();
+	afx_msg void OnRotateMode();
+	afx_msg void OnSelectMode();
+	afx_msg void OnColorMode();
+	afx_msg void OnSave();
+	afx_msg void OnLoad();
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 	afx_msg void OnDestroy();
 	afx_msg void OnPaint();
@@ -65,6 +73,9 @@ public:
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
+	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
+	afx_msg BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint pt);
+	afx_msg void OnRButtonDown(UINT nFlags, CPoint point);
 };
 
 #ifndef _DEBUG  // debug version in OglLab1View.cpp
